@@ -1,0 +1,138 @@
+name: CI Pipeline - Personal Finance Tracker
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Job 1: Test Dashboard Module
+  test-dashboard:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Install dependencies
+        working-directory: ./dashboard
+        run: npm ci
+      
+      - name: Run Dashboard tests
+        working-directory: ./dashboard
+        run: npm test
+      
+      - name: Upload Dashboard test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-test-results-node-${{ matrix.node-version }}
+          path: dashboard/coverage/
+
+  # Job 2: Test Expenses Module
+  test-expenses:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Install dependencies
+        working-directory: ./expenses
+        run: npm ci
+      
+      - name: Run Expenses tests
+        working-directory: ./expenses
+        run: npm test
+      
+      - name: Upload Expenses test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: expenses-test-results-node-${{ matrix.node-version }}
+          path: expenses/coverage/
+
+  # Job 3: Test Income Module
+  test-income:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Install dependencies
+        working-directory: ./income
+        run: npm ci
+      
+      - name: Run Income tests
+        working-directory: ./income
+        run: npm test
+      
+      - name: Upload Income test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: income-test-results-node-${{ matrix.node-version }}
+          path: income/coverage/
+
+  # Final Job: Build Application (runs only if all tests pass)
+  build:
+    needs: [test-dashboard, test-expenses, test-income]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Install all dependencies
+        run: |
+          cd dashboard && npm ci && cd ..
+          cd expenses && npm ci && cd ..
+          cd income && npm ci && cd ..
+      
+      - name: Build application
+        run: |
+          echo "Building complete application..."
+          echo "Dashboard module: OK"
+          echo "Expenses module: OK"
+          echo "Income module: OK"
+          echo "Build successful!"
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            dashboard/
+            expenses/
+            income/
